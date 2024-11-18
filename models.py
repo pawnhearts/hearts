@@ -2,7 +2,7 @@ import asyncio
 import random
 from collections import deque
 from datetime import datetime
-from email.encoders import encode_noop
+from weakref import WeakValueDictionary
 from typing import Annotated
 
 from beanie import Document, Indexed
@@ -43,6 +43,15 @@ class Player(Document):
     scores: list[int] = Field(default_factory=list)
     auto_move: bool = False
 
+    @classmethod
+    async def get_or_create(cls, **data):
+        if obj := await cls.find_one(Player.telegram_id == data['telegram_id']):
+            return obj
+        else:
+            obj = cls(**data)
+            obj.save()
+            return obj
+
 
 class Notification(BaseModel):
     event: str
@@ -51,14 +60,29 @@ class Notification(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
 
 
+games_by_player = WeakValueDictionary()
+
+
 class Game(Document):
-    players: deque[Player]
+    players: deque[Player] = Field(default_factory=deque)
     move_of: Player = None
     score_opened: bool = False
     round_number: int = 0
     table: list[str] = Field(default_factory=list)
     _timeout: asyncio.Task | None = None
     _pass_to = [-1, 1, 2, 0]
+    created_at: datetime = Field(default_factory=datetime.now)
+    started_at: datetime = None
+
+
+    async def join(self, player: Player):
+        self.players.append(player)
+        # notify
+        if len(self.players) == 4:
+            await self.start()
+
+    async def start(self):
+        self.started_at = datetime.now()
 
     async def notify(self, event: str, player: Player | None, data: dict) -> None:
         msg = Notification(event=event, player=player, data=data)

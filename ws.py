@@ -1,5 +1,9 @@
+from tarfile import GNU_MAGIC
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, APIRouter
 from fastapi.responses import HTMLResponse
+
+from models import Game, Player
 
 ws_router = APIRouter()
 
@@ -43,20 +47,31 @@ html = """
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: list[WebSocket] = []
+        self.sockets: dict[int, WebSocket] = {}
+        self.open_game = Game()
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
-        self.active_connections.append(websocket)
+        self.sockets[1] = websocket
+        player = await Player.get_or_create(telegram_id=1)
+        await self.open_game.join(player)
+        if self.open_game.started_at:
+            self.open_game = Game()
 
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+    async def disconnect(self, websocket: WebSocket):
+        player = await Player.get_or_create(telegram_id=1)
+        for k, v in self.sockets.items():
+            if v == websocket:
+                if player in self.open_game.players:
+                    self.open_game.players.remove(player)
+                del self.sockets[k]
+                break
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
         await websocket.send_text(message)
 
     async def broadcast(self, message: str):
-        for connection in self.active_connections:
+        for connection in self.sockets.values():
             await connection.send_text(message)
 
 
@@ -68,14 +83,14 @@ async def get():
     return HTMLResponse(html)
 
 
-@ws_router.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: int):
+@ws_router.websocket("/ws/{telegram_id}")
+async def websocket_endpoint(websocket: WebSocket, telegram_id: int):
     await manager.connect(websocket)
     try:
         while True:
             data = await websocket.receive_text()
             await manager.send_personal_message(f"You wrote: {data}", websocket)
-            await manager.broadcast(f"Client #{client_id} says: {data}")
+            await manager.broadcast(f"Client #{telegram_id} says: {data}")
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        await manager.broadcast(f"Client #{client_id} left the chat")
+        await manager.disconnect(websocket)
+        await manager.broadcast(f"Client #{telegram_id} left the chat")
