@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "hearts"
+version = "0.1.0"
+description = ""
+authors = ["robot <robotnaoborot@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.5"
+beanie = "^1.27.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
