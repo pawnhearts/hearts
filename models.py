@@ -81,6 +81,20 @@ class Game(Document):
         if len(self.players) == 4:
             await self.start()
 
+    async def leave(self, player: Player):
+        # notify
+        if self.started_at:
+            for p in self.players:
+                if player.telegram_id == p.telegram_id:
+                    p.auto_move = True
+                    break
+        else:
+            for i, p in enumerate(self.players):
+                if player.telegram_id == p.telegram_id:
+                    del self.players[i]
+                    break
+
+
     async def start(self):
         self.started_at = datetime.now()
 

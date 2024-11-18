@@ -3,7 +3,7 @@ from tarfile import GNU_MAGIC
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, APIRouter
 from fastapi.responses import HTMLResponse
 
-from models import Game, Player
+from models import Game, Player, games_by_player
 
 ws_router = APIRouter()
 
@@ -60,10 +60,11 @@ class ConnectionManager:
 
     async def disconnect(self, websocket: WebSocket):
         player = await Player.get_or_create(telegram_id=1)
+        if game := games_by_player[player]:
+            await game.leave(player)
+
         for k, v in self.sockets.items():
             if v == websocket:
-                if player in self.open_game.players:
-                    self.open_game.players.remove(player)
                 del self.sockets[k]
                 break
 
