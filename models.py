@@ -41,6 +41,7 @@ class Player(Document):
     hand: list[str] = None
     pass_cards: list[str] = Field(default_factory=list)
     scores: list[int] = Field(default_factory=list)
+    auto_move: bool = False
 
 
 class Notification(BaseModel):
@@ -111,9 +112,6 @@ class Game(Document):
                     raise ValidationError('Wrong suit')
         self.table.append(card)
         # notify
-        if self._timeout:
-            self._timeout.cancel()
-        self._timeout = asyncio.create_task(self.timeout_task())
         if len(self.table) == 4:
             scores = sum(map(score, self.table))
             if scores:
@@ -125,6 +123,12 @@ class Game(Document):
             self.table = []
             if not any(p.hand for p in self.players):
                 await self.deal()
+        if self._timeout:
+            self._timeout.cancel()
+        if self.players[len(self.table)].auto_move:
+            await self.auto_move()
+        else:
+            self._timeout = asyncio.create_task(self.timeout_task())
 
     async def auto_move(self):
         pass
