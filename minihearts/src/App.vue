@@ -5,37 +5,21 @@
       <pre><code>{{ initData }}</code></pre>
       <h5>initDataUnsafe</h5>
       <pre><code>{{ initDataUnsafe }}</code></pre>
+      {{window.Telegram.WebApp.initData}}
     </div>
-  <LoginWidget
-    bot-username="samplebot"
-    @auth="handleUserAuth"
-  />
 </template>
 
 <script>
 // import HelloWorld from './components/HelloWorld.vue'
 
 
-// import { LoginWidget } from 'vue-tg'
-// import { LoginWidgetUser } from 'vue-tg'
-import {
-  useWebApp,
-  useWebAppHapticFeedback,
-  useWebAppMainButton,
-  useWebAppNavigation,
-  useWebAppPopup,
-  useWebAppQrScanner,
-  useWebAppTheme,
-  useWebAppViewport,
-  useWebAppBiometricManager,
-} from 'vue-tg'
-const {platform, initData, initDataUnsafe, sendData } = useWebApp()
-
 
 export default {
   name: 'App',
+  computed: {
+    initData:  () => { return window.Telegram.WebApp.initData; }
+  },
   components: {
-    HelloWorld
   }
 }
 

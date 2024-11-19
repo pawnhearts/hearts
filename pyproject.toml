@@ -11,6 +11,8 @@ fastapi = {extras = ["all"], version = "^0.115.5"}
 beanie = "^1.27.0"
 pydantic-settings = "^2.6.1"
 uvicorn = "^0.32.0"
+python-decouple = "^3.8"
+aiogram = "^3.15.0"
 
 
 [tool.poetry.group.dev.dependencies]

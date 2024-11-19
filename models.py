@@ -2,11 +2,15 @@ import asyncio
 import random
 from collections import deque
 from datetime import datetime
+from decimal import Decimal
 from weakref import WeakValueDictionary
-from typing import Annotated
+from typing import Annotated, TypedDict
 
 from beanie import Document, Indexed
-from pydantic import Field, BaseModel, ValidationError
+from bson import ObjectId
+from pydantic import Field, BaseModel, ValidationError, PlainSerializer
+
+PlayerRef = Annotated["Player", PlainSerializer(lambda x: x.id, return_type=int)]
 
 
 def rank(card) -> int:
@@ -34,28 +38,42 @@ def get_deck() -> list[str]:
     return l
 
 
-class Player(Document):
+class GameResult(TypedDict):
+    ended_at: datetime
+    place: int
+    balance_changed: Decimal
+
+
+class User(Document):
     telegram_id: int = Annotated[str, Indexed(unique=True)]
     username: str = None
     display_name: str = None
+    balance: Decimal = Field(default_factory=lambda: Decimal(0))
+    created_at: datetime = Field(default_factory=datetime.now)
+    games_played: list[GameResult] = Field(default_factory=list)
+
+    @classmethod
+    async def get_or_create(cls, **data) -> 'User':
+        obj = await cls.find_one(Player.telegram_id == data['telegram_id']) or cls.insert_one(**data)
+        await obj.set(**data)
+        return obj
+
+
+class Player(BaseModel):
+    telegram_id: int
+    user_id: ObjectId
     hand: list[str] = None
     pass_cards: list[str] = Field(default_factory=list)
     scores: list[int] = Field(default_factory=list)
     auto_move: bool = False
 
-    @classmethod
-    async def get_or_create(cls, **data):
-        if obj := await cls.find_one(Player.telegram_id == data['telegram_id']):
-            return obj
-        else:
-            obj = cls(**data)
-            obj.save()
-            return obj
+    async def get_user(self):
+        return await User.get(self.user_id)
 
 
 class Notification(BaseModel):
     event: str
-    player: Player
+    player: PlayerRef
     data: dict
     created_at: datetime = Field(default_factory=datetime.now)
 
@@ -63,9 +81,8 @@ class Notification(BaseModel):
 games_by_player = WeakValueDictionary()
 
 
-class Game(Document):
-    players: deque[Player] = Field(default_factory=deque)
-    move_of: Player = None
+class Game(BaseModel):
+    players: deque[PlayerRef] = Field(default_factory=deque)
     score_opened: bool = False
     round_number: int = 0
     table: list[str] = Field(default_factory=list)
@@ -73,6 +90,7 @@ class Game(Document):
     _pass_to = [-1, 1, 2, 0]
     created_at: datetime = Field(default_factory=datetime.now)
     started_at: datetime = None
+    _waiting_for_pass: bool = False
 
 
     async def join(self, player: Player):
@@ -124,6 +142,7 @@ class Game(Document):
                 self.players.rotate(-i)
                 break
         if pass_to := self._pass_to[self.round_number % 4]:
+            self._waiting_for_pass = True
             for p in self.players:
                 p.pass_cards = []
             await asyncio.sleep(5)
@@ -133,6 +152,7 @@ class Game(Document):
                 )
                 # notify
                 p.pass_cards = []
+            self._waiting_for_pass = False
 
 
         self.round_number += 1
@@ -174,4 +194,14 @@ class Game(Document):
     async def timeout_task(self):
         await asyncio.sleep(7)
         await self.auto_move()
+
+    async def pass_cards(self, player: Player, cards):
+        if not self._waiting_for_pass:
+            raise ValidationError('Cannot pass cards')
+        for card in cards:
+            try:
+                player.hand.pop(player.hand.index(card))
+            except ValueError:
+                raise ValidationError("You don't have that card")
+
 

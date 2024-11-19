@@ -8,6 +8,41 @@
   </head>
   <body>
     <div id="app"></div>
+
+<!--    <script src="https://telegram.org/js/telegram-web-app.js?1"></script>-->
+    <script>
+        async function importKey(secret) {
+  return await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify'],
+  )
+}const SECRET = 'SECRET'
+
+        async function verifySignature(message, signature, secret) {
+  const key = await importKey(secret)
+
+  // Convert Base64 to Uint8Array
+  const sigBuf = Uint8Array.from(atob(signature), c => c.charCodeAt(0))
+
+  return await crypto.subtle.verify(
+    'HMAC',
+    key,
+    sigBuf,
+    new TextEncoder().encode(message),
+  )
+}
+        window.onload = function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const d = urlParams.get('d')
+            const k = urlParams.get('k')
+
+            alert(verifySignature(q[0], q[1], SECRET))
+            alert(d)
+        }
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

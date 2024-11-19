@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     mongo_user: str = "beanie"
     mongo_pass: str = "beanie"
     mongo_db: str = "beanie_db"
+    bot_token: str
 
     @property
     def mongo_dsn(self):
