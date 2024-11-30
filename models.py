@@ -203,5 +203,3 @@ class Game(BaseModel):
                 player.hand.pop(player.hand.index(card))
             except ValueError:
                 raise ValidationError("You don't have that card")
-
-

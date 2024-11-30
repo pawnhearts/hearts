@@ -1,0 +1,22 @@
+services:
+  api:
+    build:
+      context: .
+      target: builder
+    container_name: fastapi-application
+    environment:
+      PORT: 8000
+    ports:
+      - '8000:8000'
+    restart: "no"
+  web:
+    build:
+      context: minihearts
+      target: development
+    ports:
+      - 8080:8080
+    volumes:
+      - ./minihearts:/project
+      - /project/node_modules
+  mongo:
+    image: mongo

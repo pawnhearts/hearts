@@ -1,5 +1,3 @@
-from tarfile import GNU_MAGIC
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, APIRouter
 from fastapi.responses import HTMLResponse
 
@@ -54,6 +52,8 @@ class ConnectionManager:
         await websocket.accept()
         self.sockets[1] = websocket
         player = await Player.get_or_create(telegram_id=1)
+        if self.open_game.started_at:
+            self.open_game = Game()
         await self.open_game.join(player)
         if self.open_game.started_at:
             self.open_game = Game()
