@@ -1,0 +1,9 @@
+my.awesomesite {
+
+handle_path /static/* {
+      	root * ./static/
+      	file_server
+}
+
+  reverse_proxy 127.0.0.1:8000
+}
