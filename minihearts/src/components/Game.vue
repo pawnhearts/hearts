@@ -15,7 +15,6 @@ export default {
   emits: ['chat', 'move', 'pass_cards'],
   data(){
     return {
-      message:''
     }
   },
   methods: {

@@ -21,7 +21,7 @@ export default {
   <div>
     Chat:
     <p v-for="chat in chat_messages" :key="chat.created_at">
-      {{chat.player.id}} {{chat.private_to}} {{chat.message}} {{chat.creat}}
+      {{chat.player.telegram_id}} {{chat.private_to}} {{chat.message}} {{chat.creat}}
     </p>
   </div>
   <input type="text" v-model="message"><button @click="$emit('chat', this.message)">send</button>

@@ -111,6 +111,7 @@ class Game(BaseModel):
     _timeout: asyncio.Task | None = None
     _pass_to = [-1, 1, 2, 0]
     _pass_names = ['left', 'right', 'across', '']
+    _votes: set[PlayerRef] = Field(default_factory=set)
     chat_messages: list[Chat] = Field(default_factory=list, exclude=True)
     created_at: datetime = Field(default_factory=datetime.now)
     started_at: datetime = None
@@ -156,13 +157,17 @@ class Game(BaseModel):
 
 
     async def start(self):
-        while len(self.players) < 4:
-            await self.join(Player.get_bot())
-
         self.started_at = datetime.now()
 
         await self.notify('start', None, {})
         await self.deal()
+
+    async def vote_to_start(self, player: PlayerRef):
+        self._votes.add(player)
+        if len(self._votes) == len(self.players) > 1:
+            while len(self.players) < 4:
+                await self.join(Player.get_bot())
+            await self.start()
 
     async def notify(self, event: str, player: Player | None, data: dict) -> None:
         from ws import manager

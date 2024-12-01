@@ -5,7 +5,6 @@ export default {
   emits: ['chat', 'start'],
   data(){
     return {
-      message:''
     }
   },
   methods: {},
@@ -18,8 +17,8 @@ export default {
 <template>
   <div>
     Players:
-    <span v-for="player in game.players" :key="player.id">
-      {{player.id}}
+    <span v-for="player in game.players" :key="player.telegram_id">
+      {{player.telegram_id}}
     </span>
   </div>
 </template>
