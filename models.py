@@ -139,6 +139,8 @@ class Game(BaseModel):
         if len(self.players) == 4:
             await self.start()
 
+        await self.notify_state(player)
+
     async def leave(self, player: Player):
         if self.started_at:
             for p in self.players:
@@ -170,6 +172,11 @@ class Game(BaseModel):
 
         print(msg.model_dump_json())
 
+    async def notify_state(self, player: Player) -> None:
+        from ws import manager
+
+        msg = Notification(event='state', player=player, data=self.model_dump(context={'player': player}))
+        await manager.notify_player(player, msg)
 
     async def deal(self):
         self.score_opened = False
