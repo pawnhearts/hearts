@@ -72,8 +72,8 @@ class Player(BaseModel):
     telegram_id: int
     user_id: ObjectId | None = None
     display_name: str = None
-    hand: list[str] = None
-    pass_cards: list[str] = Field(default_factory=list)
+    hand: list[str] = Field(default_factory=list, exclude=True)
+    pass_cards: list[str] = Field(default_factory=list, exclude=True)
     scores: list[int] = Field(default_factory=list)
     auto_move: bool = False
     is_bot: bool = False
@@ -118,9 +118,6 @@ class Game(BaseModel):
     _public_methods = {'chat', 'player_move', 'pass_cards'}
 
 
-    def get_chat_messages(self, player: PlayerRef) -> list[Chat]:
-        return [chat for chat in self.chat_messages if not chat.private_to or chat.player == player]
-
     @field_serializer('chat_messages')
     def get_chat_messages(self, v: list[Chat], info: SerializationInfo) -> list[Chat]:
         player = info.context.get('player')
@@ -132,6 +129,8 @@ class Game(BaseModel):
 
     async def join(self, player: Player):
         self.players.append(player)
+        players[player.telegram_id] = player
+        games_by_player[player.telegram_id] = self
         await self.notify('joined', None, player.model_dump())
         for pl in self.players:
             await self.notify('joined', player, pl.model_dump())
@@ -152,6 +151,7 @@ class Game(BaseModel):
                 if player.telegram_id == p.telegram_id:
                     del self.players[i]
                     break
+        games_by_player.pop(player.telegram_id, None)
         await self.notify('left', None, player.model_dump())
 
 
@@ -162,6 +162,7 @@ class Game(BaseModel):
         self.started_at = datetime.now()
 
         await self.notify('start', None, {})
+        await self.deal()
 
     async def notify(self, event: str, player: Player | None, data: dict) -> None:
         from ws import manager
@@ -172,7 +173,7 @@ class Game(BaseModel):
         else:
             await manager.notify_game(self, msg)
 
-        print(msg.model_dump_json())
+        print(msg.model_dump())
 
     async def notify_state(self, player: Player) -> None:
         from ws import manager
