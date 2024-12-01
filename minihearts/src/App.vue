@@ -111,7 +111,7 @@ export default {
         this.table = received.data.table
       }
       if(received['event'] === 'chat'){
-        this.data.chat_messages.push(received.data)
+        this.data.chat_messages.push(received.data
       }
     },
 
