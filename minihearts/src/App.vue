@@ -21,8 +21,9 @@
             </li>
         </ul>
 
-      <Game @chat="send_chat" @move="move" @pass_cards="pass_cards" :telegram_id="telegram_id" :game="game" v-if="game.started_at"></Game>
-      <Lobby @chat="send_chat" :telegram_id="telegram_id" :game="game" v-if="!game.started_at"></Lobby>
+      <Game  @move="move" @pass_cards="pass_cards" :telegram_id="telegram_id" :game="game" :hand="hand" :table="table" v-if="game.started_at"></Game>
+      <Lobby  :telegram_id="telegram_id" :game="game" v-if="!game.started_at"></Lobby>
+      <Chat @chat="send_chat" :telegram_id="telegram_id" :chat_messages="game.chat_messages"></Chat>
     </div>
 </template>
 
@@ -108,6 +109,9 @@ export default {
       }
       if(received['event'] === 'table'){
         this.table = received.data.table
+      }
+      if(received['event'] === 'chat'){
+        this.data.chat_messages.push(received.data)
       }
     },
 
