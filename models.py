@@ -116,7 +116,7 @@ class Game(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     started_at: datetime = None
     waiting_for_pass: bool = False
-    _public_methods = {'chat', 'player_move', 'pass_cards'}
+    _public_methods = {'chat', 'player_move', 'pass_cards', 'notify_state', 'leave', 'vote_to_start'}
 
 
     @field_serializer('chat_messages')
@@ -266,7 +266,14 @@ class Game(BaseModel):
             self._timeout = asyncio.create_task(self.timeout_task())
 
     async def auto_move(self):
-        pass
+        move_of = self.players[len(self.table)]
+        if not self.table:
+            return await self.move(min(move_of.hand, key=rank))
+        suit = self.table[0][1]
+        if any(c[1] == suit for c in move_of.hand):
+            return await self.move(min(filter(lambda c: c[1] == suit, move_of.hand), key=rank))
+        return await self.move(max(move_of.hand, key=lambda c: (score(c), rank(c))))
+
 
     async def timeout_task(self):
         await asyncio.sleep(7)

@@ -2,7 +2,7 @@
 export default {
   name: 'Lobby',
   props: ['telegram_id', 'game'],
-  emits: ['chat', 'start'],
+  emits: ['chat', 'vote_to_start'],
   data(){
     return {
     }

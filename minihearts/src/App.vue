@@ -22,7 +22,7 @@
         </ul>
 
       <Game  @move="move" @pass_cards="pass_cards" :telegram_id="telegram_id" :game="game" :hand="hand" :table="table" v-if="game.started_at"></Game>
-      <Lobby  :telegram_id="telegram_id" :game="game" v-if="!game.started_at"></Lobby>
+      <Lobby @vote_to_start="vote_to_start" :telegram_id="telegram_id" :game="game" v-if="!game.started_at"></Lobby>
       <Chat @chat="send_chat" :telegram_id="telegram_id" :chat_messages="game.chat_messages"></Chat>
     </div>
 </template>
@@ -135,6 +135,9 @@ export default {
       if(this.game.waiting_for_pass) {
         this.websocket.send(JSON.stringify({event: 'pass_cards', data: {'cards': cards}}));
       }
+    },
+    vote_to_start() {
+      this.websocket.send( JSON.stringify({event: 'vote_to_start', data: {}}) );
     },
   },
   mounted() {
