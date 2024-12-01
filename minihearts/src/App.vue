@@ -98,6 +98,7 @@ export default {
     onSocketMessage(evt){
       //we parse the json that we receive
       const received = JSON.parse(evt.data);
+      this.messages.push(received)
       if(received['event'] === 'state'){
         this.game = received.data;
       }
@@ -111,7 +112,7 @@ export default {
         this.table = received.data.table
       }
       if(received['event'] === 'chat'){
-        this.data.chat_messages.push(received.data
+        this.data.chat_messages.push(received.data)
       }
     },
 
@@ -119,12 +120,6 @@ export default {
       this.connection_error = true;
     },
 
-    send_message() {
-      var to_send = { from: this.nickname, message: this.new_message };
-      this.websocket.send( JSON.stringify(to_send) );
-      this.messages.push( { from: "me"   , message: this.new_message } );
-      this.new_message = "";
-    },
     send_chat(message) {
       this.websocket.send( JSON.stringify({event: 'chat', data: {'message': message}}) );
     },
