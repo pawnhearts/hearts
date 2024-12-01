@@ -27,7 +27,7 @@ export default {
   },
   methods: {
     suitSymbol(card) {
-      return {'h': '♥', 'd': '♦', 'c': '♣'. 's': '♠'}[card.charAt(1)]
+      return {'h': '♥', 'd': '♦', 'c': '♣', 's': '♠'}[card.charAt(1)]
     }
   },
   mounted() {
