@@ -103,6 +103,7 @@ async def websocket_endpoint(websocket: WebSocket, telegram_id: int, key: Option
         while True:
             data = await websocket.receive_json()
             method = data.pop('method')
+            data['player'] = websocket.player
             if method in Game._public_methods:
                 await getattr(websocket.game, method)(**data)
     except WebSocketDisconnect:

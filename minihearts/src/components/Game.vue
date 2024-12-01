@@ -153,5 +153,19 @@
 </template>
 
 <script setup>
-  //
+export default {
+  name: 'Game',
+  props: ['telegram_id', 'game', 'hand'],
+  emits: ['chat', 'move', 'pass_cards'],
+  data(){
+    return {
+      message:''
+    }
+  },
+  methods: {},
+  mounted() {
+
+  }
+}
+
 </script>

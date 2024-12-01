@@ -114,8 +114,8 @@ class Game(BaseModel):
     chat_messages: list[Chat] = Field(default_factory=list, exclude=True)
     created_at: datetime = Field(default_factory=datetime.now)
     started_at: datetime = None
-    _waiting_for_pass: bool = False
-    _public_methods = {'chat', 'move', 'pass_cards'}
+    waiting_for_pass: bool = False
+    _public_methods = {'chat', 'player_move', 'pass_cards'}
 
 
     def get_chat_messages(self, player: PlayerRef) -> list[Chat]:
@@ -161,6 +161,8 @@ class Game(BaseModel):
 
         self.started_at = datetime.now()
 
+        await self.notify('start', None, {})
+
     async def notify(self, event: str, player: Player | None, data: dict) -> None:
         from ws import manager
 
@@ -197,9 +199,10 @@ class Game(BaseModel):
         for i, p in self.players:
             if '2c' in p.hand:
                 self.players.rotate(-i)
+                await self.notify('players', None, self.model_dump(include={'players'}))
                 break
         if pass_to := self._pass_to[self.round_number % 4]:
-            self._waiting_for_pass = True
+            self.waiting_for_pass = True
             for p in self.players:
                 p.pass_cards = []
             await asyncio.sleep(5)
@@ -209,10 +212,17 @@ class Game(BaseModel):
                 )
                 await self.notify('pass', p, {'to': self.players[(i+pass_to) % 4].id, 'where': self._pass_names[self.round_number % 4]})
                 p.pass_cards = []
-            self._waiting_for_pass = False
+            for p in self.players:
+                await self.notify('hand', p, p.model_dump(include={'hand'}))
+            self.waiting_for_pass = False
 
 
         self.round_number += 1
+
+    async def player_move(self, player: Player, card):
+        if self.players[len(self.table)] != player:
+            raise ValidationError('Not your move')
+        await self.move(card)
 
     async def move(self, card):
         move_of = self.players[len(self.table)]
@@ -236,6 +246,7 @@ class Game(BaseModel):
             await self.notify('took', None, {'took': self.players[took].id, 'score': scores})
             self.players[took].scores[-1] += scores
             self.players.rotate(-took)
+            await self.notify('players', None, self.model_dump(include={'players'}))
             self.table = []
             if not any(p.hand for p in self.players):
                 await self.deal()
@@ -256,7 +267,7 @@ class Game(BaseModel):
         await self.auto_move()
 
     async def pass_cards(self, player: Player, cards):
-        if not self._waiting_for_pass:
+        if not self.waiting_for_pass:
             raise ValidationError('Cannot pass cards')
         for card in cards:
             try:
