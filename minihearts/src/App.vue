@@ -5,7 +5,21 @@
       <pre><code>{{ initData }}</code></pre>
       <h5>initDataUnsafe</h5>
       <pre><code>{{ initDataUnsafe }}</code></pre>
-      {{window.Telegram.WebApp.initData}}
+              <button onclick="Telegram.WebApp.showAlert('Hello World!');">Launch Alert</button>
+        <button onclick="showPopup();">Launch Popup</button>
+
+        <h1>Links</h1>
+        <ul>
+            <li>
+                <a href="javascript:Telegram.WebApp.openTelegramLink('https://t.me/trendingapps');">Open link within Telegram</a>
+            </li>
+            <li>
+                <a href="javascript:Telegram.WebApp.openLink('https://ton.org/');">Open link in external browser</a>
+            </li>
+            <li>
+                <a href="javascript:Telegram.WebApp.openLink('https://telegra.ph/api',{try_instant_view:true});">Open link inside Telegram webview</a>
+            </li>
+        </ul>
     </div>
 </template>
 

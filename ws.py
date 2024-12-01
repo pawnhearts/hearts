@@ -1,7 +1,14 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, APIRouter
-from fastapi.responses import HTMLResponse
+import hmac
+from typing import Optional
 
-from models import Game, Player, games_by_player
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, APIRouter, HTTPException
+from fastapi.params import Cookie
+from fastapi.responses import HTMLResponse
+from pygments.lexers import q
+from starlette import status
+
+from config import config
+from models import Game, Player, games_by_player, Notification, User
 
 ws_router = APIRouter()
 
@@ -48,33 +55,34 @@ class ConnectionManager:
         self.sockets: dict[int, WebSocket] = {}
         self.open_game = Game()
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, telegram_id: int):
         await websocket.accept()
-        self.sockets[1] = websocket
-        player = await Player.get_or_create(telegram_id=1)
+        self.sockets[telegram_id] = websocket
+        user = await User.get_or_create(telegram_id=telegram_id)
+        player = user.player
         if self.open_game.started_at:
             self.open_game = Game()
         await self.open_game.join(player)
+        websocket.game = self.open_game
+        websocket.player = player
         if self.open_game.started_at:
             self.open_game = Game()
 
     async def disconnect(self, websocket: WebSocket):
-        player = await Player.get_or_create(telegram_id=1)
-        if game := games_by_player[player]:
-            await game.leave(player)
+        if game := games_by_player[websocket.player]:
+            await game.leave(websocket.player)
 
         for k, v in self.sockets.items():
             if v == websocket:
                 del self.sockets[k]
                 break
 
-    async def send_personal_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
+    async def notify_game(self, game: Game, notification: Notification):
+        for player in game.players:
+            await self.notify_player(player.telegram_id, notification)
 
-    async def broadcast(self, message: str):
-        for connection in self.sockets.values():
-            await connection.send_text(message)
-
+    async def notify_player(self, player: Player, notification: Notification):
+        await self.sockets[player.telegram_id].send_text(notification.model_dump_json())
 
 manager = ConnectionManager()
 
@@ -85,13 +93,18 @@ async def get():
 
 
 @ws_router.websocket("/ws/{telegram_id}")
-async def websocket_endpoint(websocket: WebSocket, telegram_id: int):
-    await manager.connect(websocket)
+async def websocket_endpoint(websocket: WebSocket, telegram_id: int, key: Optional[str] = Cookie(None)):
+    digest = hmac.new(config.secret_key.encode(), str('telegram_id').encode(), 'sha256').hexdigest()
+    if not hmac.compare_digest(key, digest):
+        return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    await manager.connect(websocket, telegram_id)
     try:
         while True:
-            data = await websocket.receive_text()
-            await manager.send_personal_message(f"You wrote: {data}", websocket)
-            await manager.broadcast(f"Client #{telegram_id} says: {data}")
+            data = await websocket.receive_json()
+            method = data.pop('method')
+            if method in Game._public_methods:
+                await getattr(websocket.game, method)(**data)
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
         await manager.broadcast(f"Client #{telegram_id} left the chat")

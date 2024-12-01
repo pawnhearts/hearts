@@ -8,7 +8,9 @@ from typing import Annotated, TypedDict
 
 from beanie import Document, Indexed
 from bson import ObjectId
-from pydantic import Field, BaseModel, ValidationError, PlainSerializer
+from faker import Faker
+from pydantic import Field, BaseModel, ValidationError, PlainSerializer, computed_field, field_serializer
+from pydantic_core.core_schema import SerializationInfo
 
 PlayerRef = Annotated["Player", PlainSerializer(lambda x: x.id, return_type=int)]
 
@@ -58,17 +60,37 @@ class User(Document):
         await obj.set(**data)
         return obj
 
+    @property
+    def player(self):
+        if self.telegram_id not in players:
+            players[self.telegram_id] = Player(telegram_id=self.telegram_id, user_id=self._id, display_name=self.display_name or self.username)
+        return players[self.telegram_id]
+
+players = WeakValueDictionary()
 
 class Player(BaseModel):
     telegram_id: int
-    user_id: ObjectId
+    user_id: ObjectId | None = None
+    display_name: str = None
     hand: list[str] = None
     pass_cards: list[str] = Field(default_factory=list)
     scores: list[int] = Field(default_factory=list)
     auto_move: bool = False
+    is_bot: bool = False
 
     async def get_user(self):
         return await User.get(self.user_id)
+
+    @classmethod
+    def get_bot(cls) -> 'Player':
+        return Player(telegram_id=0, auto_move=True, display_name=Faker().name(), is_bot=True)
+
+
+class Chat(BaseModel):
+    player: PlayerRef
+    text: str
+    private_to: PlayerRef | None = None
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 class Notification(BaseModel):
@@ -88,19 +110,36 @@ class Game(BaseModel):
     table: list[str] = Field(default_factory=list)
     _timeout: asyncio.Task | None = None
     _pass_to = [-1, 1, 2, 0]
+    _pass_names = ['left', 'right', 'across', '']
+    chat_messages: list[Chat] = Field(default_factory=list, exclude=True)
     created_at: datetime = Field(default_factory=datetime.now)
     started_at: datetime = None
     _waiting_for_pass: bool = False
+    _public_methods = {'chat', 'move', 'pass_cards'}
 
+
+    def get_chat_messages(self, player: PlayerRef) -> list[Chat]:
+        return [chat for chat in self.chat_messages if not chat.private_to or chat.player == player]
+
+    @field_serializer('chat_messages')
+    def get_chat_messages(self, v: list[Chat], info: SerializationInfo) -> list[Chat]:
+        player = info.context.get('player')
+        return [chat for chat in self.chat_messages if not chat.private_to or chat.player == player]
+
+    async def chat(self, player: Player, chat: Chat):
+        chat.player = player
+        await self.notify('chat', chat.private_to, chat.model_dump())
 
     async def join(self, player: Player):
         self.players.append(player)
-        # notify
+        await self.notify('joined', None, player.model_dump())
+        for pl in self.players:
+            await self.notify('joined', player, pl.model_dump())
+
         if len(self.players) == 4:
             await self.start()
 
     async def leave(self, player: Player):
-        # notify
         if self.started_at:
             for p in self.players:
                 if player.telegram_id == p.telegram_id:
@@ -111,13 +150,24 @@ class Game(BaseModel):
                 if player.telegram_id == p.telegram_id:
                     del self.players[i]
                     break
+        await self.notify('left', None, player.model_dump())
 
 
     async def start(self):
+        while len(self.players) < 4:
+            await self.join(Player.get_bot())
+
         self.started_at = datetime.now()
 
     async def notify(self, event: str, player: Player | None, data: dict) -> None:
+        from ws import manager
+
         msg = Notification(event=event, player=player, data=data)
+        if player:
+            await manager.notify_player(player, msg)
+        else:
+            await manager.notify_game(self, msg)
+
         print(msg.model_dump_json())
 
 
@@ -134,7 +184,7 @@ class Game(BaseModel):
         deck = get_deck()
         for p in self.players:
             p.hand = [deck.pop(0) for _ in range(13)]
-            # notify
+            await self.notify('hand', p, p.model_dump(include={'hand'}))
             p.scores.append(0)
 
         for i, p in self.players:
@@ -150,7 +200,7 @@ class Game(BaseModel):
                 self.players[(i+pass_to) % 4].hand.extend(
                     p.pass_cards or [p.hand.pop(random.randint(0, len(p.hand))) for _ in range(3)]
                 )
-                # notify
+                await self.notify('pass', p, {'to': self.players[(i+pass_to) % 4].id, 'where': self._pass_names[self.round_number % 4]})
                 p.pass_cards = []
             self._waiting_for_pass = False
 
@@ -169,18 +219,21 @@ class Game(BaseModel):
                 if card[1] != suit:
                     raise ValidationError('Wrong suit')
         self.table.append(card)
-        # notify
+        await self.notify('table', None, self.model_dump(include={'table'}))
         if len(self.table) == 4:
             scores = sum(map(score, self.table))
             if scores:
                 self.score_opened = True
             took = max_rank(self.table)
             # notify
+            await self.notify('took', None, {'took': self.players[took].id, 'score': scores})
             self.players[took].scores[-1] += scores
             self.players.rotate(-took)
             self.table = []
             if not any(p.hand for p in self.players):
                 await self.deal()
+
+        await self.notify('table', None, self.model_dump(include={'table'}))
         if self._timeout:
             self._timeout.cancel()
         if self.players[len(self.table)].auto_move:

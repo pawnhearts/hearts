@@ -24,17 +24,16 @@ dp = Dispatcher()
 
 @dp.message()
 async def start(message: types.Message):
-    data = {'d': json.dumps({'user_id': message.from_user.id})}
-    data['k'] = hmac.new('SECRET'.encode(), data['d'].encode(), 'sha256').hexdigest()
+    data = {'telegram_id': str(message.from_user.id)}
+    data['key'] = hmac.new(config.secret_key.encode(), data['telegram_id'].encode(), 'sha256').hexdigest()
 
     aa=urllib.parse.urlencode(data)
 
     print(f"https://04e9-94-29-26-16.ngrok-free.app/?{aa}")
-    webAppInfo = types.WebAppInfo(url=f"https://04e9-94-29-26-16.ngrok-free.app/?{aa}")
-    builder = ReplyKeyboardBuilder()
-    builder.add(types.KeyboardButton(text='zz', webAppInfo=webAppInfo))
+    webAppInfo = types.WebAppInfo(url=f"https://0524-94-29-26-16.ngrok-free.app/?{aa}")
+    await bot.set_chat_menu_button(message.chat.id, types.MenuButtonWebApp(text='zz', web_app=webAppInfo))
 
-    await message.reply('yo', reply_markup=builder.as_markup())
+    await message.reply('yo')
 
 
 async def main():
