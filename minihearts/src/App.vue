@@ -22,7 +22,7 @@
         </ul>
 
       <Game  @move="move" @pass_cards="pass_cards" :telegram_id="telegram_id" :game="game" :hand="hand" :table="table" v-if="game.started_at"></Game>
-      <Lobby @vote_to_start="vote_to_start" :telegram_id="telegram_id" :game="game" v-if="!game.started_at"></Lobby>
+      <Lobby @vote_to_start="vote_to_start" :telegram_id="telegram_id" :game="game" v-if="game.started_at === null"></Lobby>
       <Chat @chat="send_chat" :telegram_id="telegram_id" :chat_messages="game.chat_messages"></Chat>
     </div>
 </template>
@@ -30,6 +30,7 @@
 <script>
 import Lobby from './components/Lobby.vue'
 import Game from './components/Game.vue'
+import Chat from './components/Chat.vue'
 
 
 
@@ -84,8 +85,9 @@ export default {
       this.telegram_id = d
       document.cookie = 'key='+k
 
+      this.telegram_id = parseInt(Math.random()*33)
 
-      const sockets_bay_url = `wss://socketsbay.com/ws/${this.telegram_id}/`;
+      const sockets_bay_url = `ws://127.0.0.1:8080/ws/${this.telegram_id}`;
       this.websocket      = new WebSocket(sockets_bay_url);
       //
       this.websocket.onopen    = this.onSocketOpen;
@@ -106,7 +108,7 @@ export default {
         this.hand = received.data;
       }
       if(received['event'] === 'players'){
-        this.players = received.data.players;
+        this.game.players = received.data.players;
       }
       if(received['event'] === 'table'){
         this.table = received.data.table
@@ -138,7 +140,7 @@ export default {
   mounted() {
     this.init_chat();
   },
-  components: {Lobby, Game}
+  components: {Lobby, Game, Chat}
 }
 
 </script>

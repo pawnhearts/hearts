@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 import motor
 from beanie import init_beanie
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+
 
 from config import config
 
@@ -17,7 +19,7 @@ async def lifespan(app: FastAPI):
         config.mongo_dsn
     )
 
-    await init_beanie(client.beanie_db, document_models=[Game, Player])
+    # await init_beanie(client.beanie_db, document_models=[Game, Player])
 
     # Load the ML model
     yield
@@ -25,5 +27,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.mount("/assets", StaticFiles(directory="static/assets"), name="static")
+
 app.include_router(api_router)
 app.include_router(ws_router)
+

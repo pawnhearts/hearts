@@ -1,4 +1,4 @@
-<script setup>
+<script>
 export default {
   name: 'Lobby',
   props: ['telegram_id', 'game'],
@@ -17,9 +17,9 @@ export default {
 <template>
   <div>
     Players:
-    <span v-for="player in game.players" :key="player.telegram_id">
+    <p v-for="player in game.players" :key="player.telegram_id">
       {{player.telegram_id}}
-    </span>
+    </p>
   </div>
 </template>
 

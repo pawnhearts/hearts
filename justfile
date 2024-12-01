@@ -7,4 +7,4 @@ build:
 	cd admin && npm run build && cp -r dist/* ../frontend/
 
 serve:
-	.venv/bin/uvicorn app:app --reload --host 0.0.0.0 --port 10001
+	.venv/bin/uvicorn app:app --reload --host 0.0.0.0 --port 8080

@@ -7,12 +7,22 @@ from weakref import WeakValueDictionary
 from typing import Annotated, TypedDict
 
 from beanie import Document, Indexed
-from bson import ObjectId
+
+# from bson import ObjectId
 from faker import Faker
-from pydantic import Field, BaseModel, ValidationError, PlainSerializer, computed_field, field_serializer
+from pydantic import (
+    Field,
+    BaseModel,
+    ValidationError,
+    PlainSerializer,
+    computed_field,
+    field_serializer,
+)
 from pydantic_core.core_schema import SerializationInfo
 
-PlayerRef = Annotated["Player", PlainSerializer(lambda x: x.id, return_type=int)]
+PlayerRef = Annotated[
+    "Player", PlainSerializer(lambda x: x.telegram_id, return_type=int)
+]
 
 
 def rank(card) -> int:
@@ -55,22 +65,30 @@ class User(Document):
     games_played: list[GameResult] = Field(default_factory=list)
 
     @classmethod
-    async def get_or_create(cls, **data) -> 'User':
-        obj = await cls.find_one(Player.telegram_id == data['telegram_id']) or cls.insert_one(**data)
+    async def get_or_create(cls, **data) -> "User":
+        obj = await cls.find_one(
+            Player.telegram_id == data["telegram_id"]
+        ) or cls.insert_one(**data)
         await obj.set(**data)
         return obj
 
     @property
     def player(self):
         if self.telegram_id not in players:
-            players[self.telegram_id] = Player(telegram_id=self.telegram_id, user_id=self._id, display_name=self.display_name or self.username)
+            players[self.telegram_id] = Player(
+                telegram_id=self.telegram_id,
+                user_id=self._id,
+                display_name=self.display_name or self.username,
+            )
         return players[self.telegram_id]
+
 
 players = WeakValueDictionary()
 
+
 class Player(BaseModel):
     telegram_id: int
-    user_id: ObjectId | None = None
+    # user_id: ObjectId | None = None
     display_name: str = None
     hand: list[str] = Field(default_factory=list, exclude=True)
     pass_cards: list[str] = Field(default_factory=list, exclude=True)
@@ -82,8 +100,10 @@ class Player(BaseModel):
         return await User.get(self.user_id)
 
     @classmethod
-    def get_bot(cls) -> 'Player':
-        return Player(telegram_id=0, auto_move=True, display_name=Faker().name(), is_bot=True)
+    def get_bot(cls) -> "Player":
+        return Player(
+            telegram_id=0, auto_move=True, display_name=Faker().name(), is_bot=True
+        )
 
 
 class Chat(BaseModel):
@@ -95,7 +115,7 @@ class Chat(BaseModel):
 
 class Notification(BaseModel):
     event: str
-    player: PlayerRef
+    player: PlayerRef | None = None
     data: dict
     created_at: datetime = Field(default_factory=datetime.now)
 
@@ -104,42 +124,54 @@ games_by_player = WeakValueDictionary()
 
 
 class Game(BaseModel):
-    players: deque[PlayerRef] = Field(default_factory=deque)
+    players: deque[Player] = Field(default_factory=deque)
     score_opened: bool = False
     round_number: int = 0
     table: list[str] = Field(default_factory=list)
     _timeout: asyncio.Task | None = None
     _pass_to = [-1, 1, 2, 0]
-    _pass_names = ['left', 'right', 'across', '']
-    _votes: set[PlayerRef] = Field(default_factory=set)
+    _pass_names = ["left", "right", "across", ""]
+    votes: set[PlayerRef] = Field(default_factory=set)
     chat_messages: list[Chat] = Field(default_factory=list, exclude=True)
     created_at: datetime = Field(default_factory=datetime.now)
     started_at: datetime = None
     waiting_for_pass: bool = False
-    _public_methods = {'chat', 'player_move', 'pass_cards', 'notify_state', 'leave', 'vote_to_start'}
+    _public_methods = {
+        "chat",
+        "player_move",
+        "pass_cards",
+        "notify_state",
+        "leave",
+        "vote_to_start",
+    }
 
+    @field_serializer("players")
+    def get_players(self, v: deque[PlayerRef]) -> list[Player]:
+        return list(self.players)
 
-    @field_serializer('chat_messages')
+    @field_serializer("chat_messages")
     def get_chat_messages(self, v: list[Chat], info: SerializationInfo) -> list[Chat]:
-        player = info.context.get('player')
-        return [chat for chat in self.chat_messages if not chat.private_to or chat.player == player]
+        player = info.context.get("player")
+        return [
+            chat
+            for chat in self.chat_messages
+            if not chat.private_to or chat.player == player
+        ]
 
     async def chat(self, player: Player, chat: Chat):
         chat.player = player
-        await self.notify('chat', chat.private_to, chat.model_dump())
+        await self.notify("chat", chat.private_to, chat.model_dump())
 
     async def join(self, player: Player):
         self.players.append(player)
         players[player.telegram_id] = player
         games_by_player[player.telegram_id] = self
-        await self.notify('joined', None, player.model_dump())
-        for pl in self.players:
-            await self.notify('joined', player, pl.model_dump())
+        await self.notify("joined", None, player.model_dump())
+
+        await self.notify("players", None, self.model_dump(include={"players"}))
 
         if len(self.players) == 4:
             await self.start()
-
-        await self.notify_state(player)
 
     async def leave(self, player: Player):
         if self.started_at:
@@ -153,18 +185,19 @@ class Game(BaseModel):
                     del self.players[i]
                     break
         games_by_player.pop(player.telegram_id, None)
-        await self.notify('left', None, player.model_dump())
-
+        await self.notify("left", None, player.model_dump())
+        await self.notify("players", None, self.model_dump(include={"players"}))
 
     async def start(self):
         self.started_at = datetime.now()
 
-        await self.notify('start', None, {})
         await self.deal()
+        for player in self.players:
+            await self.notify_state(player)
 
     async def vote_to_start(self, player: PlayerRef):
-        self._votes.add(player)
-        if len(self._votes) == len(self.players) > 1:
+        self.votes.add(player)
+        if len(self.votes) == len(self.players) > 1:
             while len(self.players) < 4:
                 await self.join(Player.get_bot())
             await self.start()
@@ -183,7 +216,11 @@ class Game(BaseModel):
     async def notify_state(self, player: Player) -> None:
         from ws import manager
 
-        msg = Notification(event='state', player=player, data=self.model_dump(context={'player': player}))
+        msg = Notification(
+            event="state",
+            player=player,
+            data=self.model_dump(context={"player": player}),
+        )
         await manager.notify_player(player, msg)
 
     async def deal(self):
@@ -191,7 +228,7 @@ class Game(BaseModel):
         self.table = []
 
         if scores := [p.scores for p in self.players]:
-            if any(s==26 for s in scores[-1]):
+            if any(s == 26 for s in scores[-1]):
                 # shoot the moon
                 for p in self.players:
                     p.scores[-1] = 0 if p.scores[-1] == 26 else 26
@@ -199,13 +236,13 @@ class Game(BaseModel):
         deck = get_deck()
         for p in self.players:
             p.hand = [deck.pop(0) for _ in range(13)]
-            await self.notify('hand', p, p.model_dump(include={'hand'}))
+            await self.notify("hand", p, {"hand": p.hand})
             p.scores.append(0)
 
-        for i, p in self.players:
-            if '2c' in p.hand:
+        for i, p in enumerate(self.players):
+            if "2c" in p.hand:
                 self.players.rotate(-i)
-                await self.notify('players', None, self.model_dump(include={'players'}))
+                await self.notify("players", None, self.model_dump(include={"players"}))
                 break
         if pass_to := self._pass_to[self.round_number % 4]:
             self.waiting_for_pass = True
@@ -213,51 +250,73 @@ class Game(BaseModel):
                 p.pass_cards = []
             await asyncio.sleep(5)
             for i, p in enumerate(self.players):
-                self.players[(i+pass_to) % 4].hand.extend(
-                    p.pass_cards or [p.hand.pop(random.randint(0, len(p.hand))) for _ in range(3)]
+                while len(p.pass_cards) < 3:
+                    card = random.choice(p.hand)
+                    p.pass_cards.append(card)
+                    p.hand.remove(card)
+                while len(p.pass_cards) > 3:
+                    p.hand.append(p.pass_cards.pop(0))
+                self.players[(i + pass_to) % 4].hand.extend(p.pass_cards)
+                await self.notify(
+                    "pass",
+                    p,
+                    {
+                        "to": self.players[(i + pass_to) % 4].telegram_id,
+                        "where": self._pass_names[self.round_number % 4],
+                        "cards": p.pass_cards,
+                    },
                 )
-                await self.notify('pass', p, {'to': self.players[(i+pass_to) % 4].id, 'where': self._pass_names[self.round_number % 4]})
+                await self.notify(
+                    "got",
+                    self.players[(i + pass_to) % 4],
+                    {
+                        "from": p,
+                        "where": self._pass_names[self.round_number % 4],
+                        "cards": p.pass_cards,
+                    },
+                )
                 p.pass_cards = []
             for p in self.players:
-                await self.notify('hand', p, p.model_dump(include={'hand'}))
+                await self.notify("hand", p, {"hand": p.hand})
             self.waiting_for_pass = False
-
 
         self.round_number += 1
 
     async def player_move(self, player: Player, card):
         if self.players[len(self.table)] != player:
-            raise ValidationError('Not your move')
+            raise ValidationError("Not your move")
         await self.move(card)
 
     async def move(self, card):
         move_of = self.players[len(self.table)]
         if card not in move_of.hand:
-            raise ValidationError('You don\'t have that card')
+            raise ValidationError("You don't have that card")
         if score(card) and not self.score_opened:
-            raise ValidationError('Wrong move')
+            raise ValidationError("Wrong move")
         if self.table:
             suit = self.table[0][1]
             if any(c[1] == suit for c in move_of.hand):
                 if card[1] != suit:
-                    raise ValidationError('Wrong suit')
+                    raise ValidationError("Wrong suit")
         self.table.append(card)
-        await self.notify('table', None, self.model_dump(include={'table'}))
+        await self.notify("table", None, self.model_dump(include={"table"}))
         if len(self.table) == 4:
             scores = sum(map(score, self.table))
             if scores:
                 self.score_opened = True
             took = max_rank(self.table)
             # notify
-            await self.notify('took', None, {'took': self.players[took].id, 'score': scores})
+            await self.notify(
+                "took", None, {"took": self.players[took], "score": scores}
+            )
             self.players[took].scores[-1] += scores
             self.players.rotate(-took)
-            await self.notify('players', None, self.model_dump(include={'players'}))
+            await self.notify("players", None, self.model_dump(include={"players"}))
             self.table = []
             if not any(p.hand for p in self.players):
                 await self.deal()
 
-        await self.notify('table', None, self.model_dump(include={'table'}))
+        await self.notify("table", None, self.model_dump(include={"table"}))
         if self._timeout:
             self._timeout.cancel()
         if self.players[len(self.table)].auto_move:
@@ -271,9 +330,10 @@ class Game(BaseModel):
             return await self.move(min(move_of.hand, key=rank))
         suit = self.table[0][1]
         if any(c[1] == suit for c in move_of.hand):
-            return await self.move(min(filter(lambda c: c[1] == suit, move_of.hand), key=rank))
+            return await self.move(
+                min(filter(lambda c: c[1] == suit, move_of.hand), key=rank)
+            )
         return await self.move(max(move_of.hand, key=lambda c: (score(c), rank(c))))
-
 
     async def timeout_task(self):
         await asyncio.sleep(7)
@@ -281,7 +341,7 @@ class Game(BaseModel):
 
     async def pass_cards(self, player: Player, cards):
         if not self.waiting_for_pass:
-            raise ValidationError('Cannot pass cards')
+            raise ValidationError("Cannot pass cards")
         for card in cards:
             try:
                 player.hand.pop(player.hand.index(card))

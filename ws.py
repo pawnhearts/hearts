@@ -1,5 +1,6 @@
 import hmac
 from typing import Optional
+from xml.sax import parse
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, APIRouter, HTTPException
 from fastapi.params import Cookie
@@ -58,8 +59,9 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, telegram_id: int):
         await websocket.accept()
         self.sockets[telegram_id] = websocket
-        user = await User.get_or_create(telegram_id=telegram_id)
-        player = user.player
+        # user = await User.get_or_create(telegram_id=telegram_id)
+        # player = user.player
+        player = Player(telegram_id=telegram_id, display_name=f'a{telegram_id}')
         if self.open_game.started_at:
             self.open_game = Game()
         await self.open_game.join(player)
@@ -69,7 +71,7 @@ class ConnectionManager:
             self.open_game = Game()
 
     async def disconnect(self, websocket: WebSocket):
-        if game := games_by_player[websocket.player]:
+        if game := games_by_player[websocket.player.telegram_id]:
             await game.leave(websocket.player)
 
         for k, v in self.sockets.items():
@@ -79,10 +81,13 @@ class ConnectionManager:
 
     async def notify_game(self, game: Game, notification: Notification):
         for player in game.players:
-            await self.notify_player(player.telegram_id, notification)
+            await self.notify_player(player, notification)
 
     async def notify_player(self, player: Player, notification: Notification):
-        await self.sockets[player.telegram_id].send_text(notification.model_dump_json())
+        try:
+            await self.sockets[player.telegram_id].send_text(notification.model_dump_json())
+        except:
+            self.sockets.pop(player.telegram_id, None)
 
 manager = ConnectionManager()
 
@@ -93,10 +98,10 @@ async def get():
 
 
 @ws_router.websocket("/ws/{telegram_id}")
-async def websocket_endpoint(websocket: WebSocket, telegram_id: int, key: Optional[str] = Cookie(None)):
-    digest = hmac.new(config.secret_key.encode(), str('telegram_id').encode(), 'sha256').hexdigest()
-    if not hmac.compare_digest(key, digest):
-        return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+async def websocket_endpoint(websocket: WebSocket, telegram_id: int):#, key: Optional[str] = Cookie(None)):
+    # digest = hmac.new(config.secret_key.encode(), str('telegram_id').encode(), 'sha256').hexdigest()
+    # if not hmac.compare_digest(key, digest):
+    #     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     await manager.connect(websocket, telegram_id)
     try:
@@ -108,4 +113,3 @@ async def websocket_endpoint(websocket: WebSocket, telegram_id: int, key: Option
                 await getattr(websocket.game, method)(**data)
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
-        await manager.broadcast(f"Client #{telegram_id} left the chat")

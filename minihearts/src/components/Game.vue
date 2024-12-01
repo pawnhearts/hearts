@@ -1,4 +1,5 @@
 <template>
+  <h1>game</h1>
   <div v-for="player in game.players">
     {{player.telegram_id}}
     <div v-if="player.telegram_id === telegram_id">
@@ -15,7 +16,7 @@
   <p v-for="c in table">{c}</p>
 </template>
 
-<script setup>
+<script>
 import '@/assets/cards.css'
 export default {
   name: 'Game',

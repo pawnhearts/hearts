@@ -30,7 +30,7 @@ async def start(message: types.Message):
     aa=urllib.parse.urlencode(data)
 
     print(f"https://04e9-94-29-26-16.ngrok-free.app/?{aa}")
-    webAppInfo = types.WebAppInfo(url=f"https://0524-94-29-26-16.ngrok-free.app/?{aa}")
+    webAppInfo = types.WebAppInfo(url=f"https://2219-94-29-26-16.ngrok-free.app/?{aa}")
     await bot.set_chat_menu_button(message.chat.id, types.MenuButtonWebApp(text='zz', web_app=webAppInfo))
 
     await message.reply('yo')
