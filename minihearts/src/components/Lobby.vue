@@ -14,10 +14,42 @@ export default {
   },
   methods:{
     init_chat() {
-      //ask for a nickname
 
-      //connect to Sockets Bay
-      var sockets_bay_url = `wss://socketsbay.com/wss/v2/100/${this.sockets_bay_api_key}/`;
+      async function importKey(secret) {
+        return await crypto.subtle.importKey(
+          'raw',
+          new TextEncoder().encode(secret),
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign', 'verify'],
+        )
+      }const SECRET = 'SECRET'
+
+      async function verifySignature(message, signature, secret) {
+        const key = await importKey(secret)
+
+        // Convert Base64 to Uint8Array
+        const sigBuf = Uint8Array.from(atob(signature), c => c.charCodeAt(0))
+
+        return await crypto.subtle.verify(
+          'HMAC',
+          key,
+          sigBuf,
+          new TextEncoder().encode(message),
+        )
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+            const d = urlParams.get('telegram_id')
+            const k = urlParams.get('key')
+      if(!verifySignature(d, k, SECRET)) {
+      alert('error')
+      }
+      this.telegram_id = d
+      document.cookie = 'key='+k
+
+
+      const sockets_bay_url = `wss://socketsbay.com/ws/${this.telegram_id}/`;
       this.websocket      = new WebSocket(sockets_bay_url);
       //
       this.websocket.onopen    = this.onSocketOpen;
@@ -29,12 +61,10 @@ export default {
     },
     onSocketMessage(evt){
       //we parse the json that we receive
-      var received = JSON.parse(evt.data);
-      //check if it's our message or from a friend
-      this.messages.push( { from: "other", message: received.message } );
-      //scroll to the bottom of the messages div
-      const messages_div = document.getElementById('messages');
-      messages_div.scrollTo({top: messages_div.scrollHeight, behavior: 'smooth'});
+      const received = JSON.parse(evt.data);
+      if(received['event'] === 'state'){
+        this.game = received.data;
+      }
     },
 
     onSockerError(evt){
