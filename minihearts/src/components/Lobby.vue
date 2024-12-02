@@ -16,10 +16,12 @@ export default {
 
 <template>
   <div>
+    <h1>Lobby</h1>
     Players:
     <p v-for="player in game.players" :key="player.telegram_id">
       {{player.telegram_id}}
     </p>
+    <button @click="$emit('vote_to_start')">start with bots</button>
   </div>
 </template>
 

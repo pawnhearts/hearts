@@ -1,3 +1,4 @@
+import asyncio
 import hmac
 from typing import Optional
 from xml.sax import parse
@@ -5,11 +6,12 @@ from xml.sax import parse
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, APIRouter, HTTPException
 from fastapi.params import Cookie
 from fastapi.responses import HTMLResponse
+from pydantic import ValidationError
 from pygments.lexers import q
 from starlette import status
 
 from config import config
-from models import Game, Player, games_by_player, Notification, User
+from models import Game, Player, games_by_player, Notification, User, public_methods
 
 ws_router = APIRouter()
 
@@ -55,6 +57,7 @@ class ConnectionManager:
     def __init__(self):
         self.sockets: dict[int, WebSocket] = {}
         self.open_game = Game()
+
 
     async def connect(self, websocket: WebSocket, telegram_id: int):
         await websocket.accept()
@@ -102,14 +105,23 @@ async def websocket_endpoint(websocket: WebSocket, telegram_id: int):#, key: Opt
     # digest = hmac.new(config.secret_key.encode(), str('telegram_id').encode(), 'sha256').hexdigest()
     # if not hmac.compare_digest(key, digest):
     #     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    # manager.open_game =Game()
+    #
+    # for telegram_id in [22, 33, 22]:
+    #     player = Player(telegram_id=telegram_id, display_name=f'a{telegram_id}')
+    #     await manager.open_game.join(player)
+    # await asyncio.sleep(2)
 
     await manager.connect(websocket, telegram_id)
     try:
         while True:
             data = await websocket.receive_json()
-            method = data.pop('method')
+            method = data.pop('event')
             data['player'] = websocket.player
-            if method in Game._public_methods:
-                await getattr(websocket.game, method)(**data)
+            if method in public_methods:
+                try:
+                    await getattr(websocket.game, method)(**data)
+                except ValidationError as e:
+                    await websocket.send_json({'error': str(e)})
     except WebSocketDisconnect:
         await manager.disconnect(websocket)

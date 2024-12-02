@@ -36,6 +36,9 @@ def score(card) -> int:
         return 1
     return 0
 
+def sort_hand(hand):
+    return sorted(hand, key=lambda c: ('cdsh'.index(c[1]), rank(c)))
+
 
 def max_rank(cards):
     return cards.index(max(filter(lambda c: c[1] == cards[0][1]), key=rank))
@@ -131,19 +134,11 @@ class Game(BaseModel):
     _timeout: asyncio.Task | None = None
     _pass_to = [-1, 1, 2, 0]
     _pass_names = ["left", "right", "across", ""]
-    votes: set[PlayerRef] = Field(default_factory=set)
+    votes: set[int] = Field(default_factory=set)
     chat_messages: list[Chat] = Field(default_factory=list, exclude=True)
     created_at: datetime = Field(default_factory=datetime.now)
     started_at: datetime = None
     waiting_for_pass: bool = False
-    _public_methods = {
-        "chat",
-        "player_move",
-        "pass_cards",
-        "notify_state",
-        "leave",
-        "vote_to_start",
-    }
 
     @field_serializer("players")
     def get_players(self, v: deque[PlayerRef]) -> list[Player]:
@@ -158,9 +153,9 @@ class Game(BaseModel):
             if not chat.private_to or chat.player == player
         ]
 
-    async def chat(self, player: Player, chat: Chat):
-        chat.player = player
-        await self.notify("chat", chat.private_to, chat.model_dump())
+    async def chat(self, player: Player, message: str, private_to: PlayerRef|None=None):
+        chat_message = Chat(player=player, text=message, private_to=private_to)
+        await self.notify("chat", chat_message.private_to, chat_message.model_dump())
 
     async def join(self, player: Player):
         self.players.append(player)
@@ -169,6 +164,7 @@ class Game(BaseModel):
         await self.notify("joined", None, player.model_dump())
 
         await self.notify("players", None, self.model_dump(include={"players"}))
+        await self.notify_state(player)
 
         if len(self.players) == 4:
             await self.start()
@@ -190,14 +186,14 @@ class Game(BaseModel):
 
     async def start(self):
         self.started_at = datetime.now()
-
-        await self.deal()
         for player in self.players:
             await self.notify_state(player)
 
+        await self.deal()
+
     async def vote_to_start(self, player: PlayerRef):
-        self.votes.add(player)
-        if len(self.votes) == len(self.players) > 1:
+        self.votes.add(player.telegram_id)
+        if len(self.votes) == len(self.players) >= 1:
             while len(self.players) < 4:
                 await self.join(Player.get_bot())
             await self.start()
@@ -229,14 +225,14 @@ class Game(BaseModel):
 
         if scores := [p.scores for p in self.players]:
             if any(s == 26 for s in scores[-1]):
-                # shoot the moon
                 for p in self.players:
                     p.scores[-1] = 0 if p.scores[-1] == 26 else 26
+                await self.notify('shoot_the_moon', None, {})
 
         deck = get_deck()
         for p in self.players:
             p.hand = [deck.pop(0) for _ in range(13)]
-            await self.notify("hand", p, {"hand": p.hand})
+            await self.notify("hand", p, {"hand": sort_hand(p.hand)})
             p.scores.append(0)
 
         for i, p in enumerate(self.players):
@@ -248,7 +244,15 @@ class Game(BaseModel):
             self.waiting_for_pass = True
             for p in self.players:
                 p.pass_cards = []
-            await asyncio.sleep(5)
+                await self.notify(
+                    "waiting_pass",
+                    p,
+                    {
+                        "to": self.players[(i + pass_to) % 4].telegram_id,
+                        "where": self._pass_names[self.round_number % 4],
+                    },
+                )
+            await asyncio.sleep(8)
             for i, p in enumerate(self.players):
                 while len(p.pass_cards) < 3:
                     card = random.choice(p.hand)
@@ -277,7 +281,7 @@ class Game(BaseModel):
                 )
                 p.pass_cards = []
             for p in self.players:
-                await self.notify("hand", p, {"hand": p.hand})
+                await self.notify("hand",p , {"hand": sort_hand(p.hand)})
             self.waiting_for_pass = False
 
         self.round_number += 1
@@ -347,3 +351,12 @@ class Game(BaseModel):
                 player.hand.pop(player.hand.index(card))
             except ValueError:
                 raise ValidationError("You don't have that card")
+
+public_methods = (
+    "chat",
+    "player_move",
+    "pass_cards",
+    "notify_state",
+    "leave",
+    "vote_to_start",
+)

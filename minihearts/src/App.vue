@@ -1,27 +1,27 @@
 <template>
     <div>
-      <h4>Data passed</h4>
-      <h5>initData</h5>
-      <pre><code>{{ initData }}</code></pre>
-      <h5>initDataUnsafe</h5>
-      <pre><code>{{ initDataUnsafe }}</code></pre>
-              <button onclick="Telegram.WebApp.showAlert('Hello World!');">Launch Alert</button>
-        <button onclick="showPopup();">Launch Popup</button>
+<!--      <h4>Data passed</h4>-->
+<!--      <h5>initData</h5>-->
+<!--      <pre><code>{{ initData }}</code></pre>-->
+<!--      <h5>initDataUnsafe</h5>-->
+<!--      <pre><code>{{ initDataUnsafe }}</code></pre>-->
+<!--              <button onclick="Telegram.WebApp.showAlert('Hello World!');">Launch Alert</button>-->
+<!--        <button onclick="showPopup();">Launch Popup</button>-->
 
-        <h1>Links</h1>
-        <ul>
-            <li>
-                <a href="javascript:Telegram.WebApp.openTelegramLink('https://t.me/trendingapps');">Open link within Telegram</a>
-            </li>
-            <li>
-                <a href="javascript:Telegram.WebApp.openLink('https://ton.org/');">Open link in external browser</a>
-            </li>
-            <li>
-                <a href="javascript:Telegram.WebApp.openLink('https://telegra.ph/api',{try_instant_view:true});">Open link inside Telegram webview</a>
-            </li>
-        </ul>
+<!--        <h1>Links</h1>-->
+<!--        <ul>-->
+<!--            <li>-->
+<!--                <a href="javascript:Telegram.WebApp.openTelegramLink('https://t.me/trendingapps');">Open link within Telegram</a>-->
+<!--            </li>-->
+<!--            <li>-->
+<!--                <a href="javascript:Telegram.WebApp.openLink('https://ton.org/');">Open link in external browser</a>-->
+<!--            </li>-->
+<!--            <li>-->
+<!--                <a href="javascript:Telegram.WebApp.openLink('https://telegra.ph/api',{try_instant_view:true});">Open link inside Telegram webview</a>-->
+<!--            </li>-->
+<!--        </ul>-->
 
-      <Game  @move="move" @pass_cards="pass_cards" :telegram_id="telegram_id" :game="game" :hand="hand" :table="table" v-if="game.started_at"></Game>
+      <Game  @move="move" @pass_cards="pass_cards" :telegram_id="telegram_id" :game="game" :hand="hand" :table="table" v-if="game.started_at !== null"></Game>
       <Lobby @vote_to_start="vote_to_start" :telegram_id="telegram_id" :game="game" v-if="game.started_at === null"></Lobby>
       <Chat @chat="send_chat" :telegram_id="telegram_id" :chat_messages="game.chat_messages"></Chat>
     </div>
@@ -105,7 +105,7 @@ export default {
         this.game = received.data;
       }
       if(received['event'] === 'hand'){
-        this.hand = received.data;
+        this.hand = received.data.hand;
       }
       if(received['event'] === 'players'){
         this.game.players = received.data.players;
@@ -116,6 +116,12 @@ export default {
       if(received['event'] === 'chat'){
         this.data.chat_messages.push(received.data)
       }
+      if(received['event'] === 'waiting_pass'){
+        this.game.waiting_for_pass = true
+      }
+      if(received['event'] === 'pass'){
+        this.game.waiting_for_pass = false
+      }
     },
 
     onSockerError(evt){
@@ -123,18 +129,19 @@ export default {
     },
 
     send_chat(message) {
-      this.websocket.send( JSON.stringify({event: 'chat', data: {'message': message}}) );
+      this.websocket.send( JSON.stringify({event: 'chat', 'message': message}) );
     },
     move(card) {
-      this.websocket.send( JSON.stringify({event: 'player_move', data: {'card': card}}) );
+      this.websocket.send( JSON.stringify({event: 'player_move', 'card': card}) );
     },
     pass_cards(cards) {
       if(this.game.waiting_for_pass) {
-        this.websocket.send(JSON.stringify({event: 'pass_cards', data: {'cards': cards}}));
+        this.websocket.send(JSON.stringify({event: 'pass_cards', 'cards': cards}));
+        this.game.waiting_for_pass = false
       }
     },
     vote_to_start() {
-      this.websocket.send( JSON.stringify({event: 'vote_to_start', data: {}}) );
+      this.websocket.send( JSON.stringify({event: 'vote_to_start'}) );
     },
   },
   mounted() {
@@ -146,12 +153,8 @@ export default {
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+#app, body {
+  width: 100%;
+  height: 100%;
 }
 </style>
