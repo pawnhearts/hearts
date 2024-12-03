@@ -2,13 +2,11 @@
   <div class="playingCards fourColours rotateHand">
   <h1>game</h1>
   <div v-for="player in game.players">
-    {{player.telegram_id}}
-    <div v-if="player.telegram_id !== telegram_id" :class="player_classes[player.telegram_id]">
-      <div class="card back" v-for="n in hand.length">*</div>
+    {{player.display_name}}
     </div>
-    <div v-if="player.telegram_id === telegram_id" :class="player_classes[player.telegram_id]">
-      {{pass_cards}}
-      <ul class="table">
+    <div class="hand">
+
+      <ul class="hand">
         <li v-for="c in hand" :key="c">
           <label :for="c" :class="classes(c)" v-if="game.waiting_for_pass">
             <span class="rank">{{c.charAt(0)}}</span>
@@ -16,7 +14,7 @@
             <input type="checkbox" :name="c" :id="c" :value="c" v-model="pass_cards" @change="pass_cards_changed" />
           </label>
           <a href="#" :class="classes(c)+isSuitable(c)?['invalid']:[]" v-if="!game.waiting_for_pass">
-          <span class="rank">{{c.charAt(0)}}</span+c<span class="suit">{{suitSymbol(c)}}</span>
+          <span class="rank">{{c.charAt(0)}}</span><span class="suit">{{suitSymbol(c)}}</span>
         </a>
         </li>
       </ul>
@@ -27,11 +25,9 @@
 <!--          </div>-->
 <!--        </li>-->
 <!--      </ul>-->
-      <button v-for="c in hand" @click="$emit('move', c)">{{c}}</button>
+<!--      <button v-for="c in hand" @click="$emit('move', c)">{{c}}</button>-->
     </div>
-  </div>
-    <div class="mid">
-  <p v-for="c in table">{c}</p>
+    <div :class="['mid', player_classes[i]]" v-for="(card, i) in table" :key="card">
       </div>
   </div>
 </template>
@@ -48,7 +44,7 @@ export default {
   },
   methods: {
     classes(card) {
-      return ['card', `rank-${card.charAt(0)}`, card.charAt(1)]
+      return ['card', `rank-${card.charAt(0)}`, card.charAt(1), this.isSuitable(card)?'':'disabled']
     },
     suitSymbol(card) {
       return {'h': '♥', 'd': '♦', 'c': '♣', 's': '♠'}[card.charAt(1)]
@@ -79,7 +75,8 @@ export default {
       for(let i=0; i<4; i++){
         if(this.game.players[i].telegram_id === this.telegram_id) {
           order = order.splice(i)
-          return Object.fromEntries(this.game.players.map((p, i) => [p.telegram_id, order[i]]))
+          return this.game.players.map((p, i) => order[i])
+
         }
       }
 
@@ -92,60 +89,35 @@ export default {
 
 </script>
 <style>
-@import "../assets/cards.css";
-.south{
+//@import "../assets/cards.css";
+div.hand{
   position: absolute;
   bottom: 0;
-  width: 80%;
+  width: 100%;
   height: 200px;
   display: block;
   margin-left: auto;
-  margin-right: auto;
-  background-color: red;
-}
-.north{
-  position: absolute;
-  top: 0;
-  width: 80%;
-  height: 200px;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-.west{
-  position: absolute;
-  left: 0;
-  height: 80%;
-  width: 200px;
-  display: block;
-  margin-top: auto;
-  margin-bottom: auto;
-}
-.west div.card{
-  display: block;
-  margin-top: -40px;
-}
-.east{
-  position: absolute;
-  right: 0;
-  height: 80%;
-  width: 200px;
-  display: block;
-  margin-top: auto;
-  margin-bottom: auto;
-}
-.east div.card{
-  display: block;
-  margin-top: -40px;
 }
 .mid {
-  background: orange;
-  width: 300px;
-  height: 200px;
+  width: 3.3em;
+  height: 4.6em;
   position: absolute;
   top: 50%;
   left: 50%;
-  margin: -150px 0 0 -100px;
+  margin-top: 4.6em;
+  background-color: red;
+}
+div.mid.north{
+  margin-top: 4.6em;
+}
+div.mid.south{
+  margin-top: -4.6em;
+}
+div.mid.west{
+  margin-left: -3.3em;
+}
+div.mid.east{
+  margin-left: 3.3em;
 }
 .invalid {
     opacity:0.5;

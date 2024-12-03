@@ -129,7 +129,7 @@ export default {
     },
 
     send_chat(message) {
-      this.websocket.send( JSON.stringify({event: 'chat', 'message': message}) );
+      this.websocket.send( JSON.stringify({event: 'message', 'message': message}) );
     },
     move(card) {
       this.websocket.send( JSON.stringify({event: 'player_move', 'card': card}) );

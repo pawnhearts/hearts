@@ -110,7 +110,7 @@ class Player(BaseModel):
 
 
 class Chat(BaseModel):
-    player: PlayerRef
+    player: PlayerRef | None = None
     text: str
     private_to: PlayerRef | None = None
     created_at: datetime = Field(default_factory=datetime.now)
@@ -153,8 +153,11 @@ class Game(BaseModel):
             if not chat.private_to or chat.player == player
         ]
 
-    async def chat(self, player: Player, message: str, private_to: PlayerRef|None=None):
+    async def message(self, player: Player, message: str, private_to: PlayerRef|None=None):
         chat_message = Chat(player=player, text=message, private_to=private_to)
+        await self.notify("chat", chat_message.private_to, chat_message.model_dump())
+
+    async def chat(self, chat_message: Chat):
         await self.notify("chat", chat_message.private_to, chat_message.model_dump())
 
     async def join(self, player: Player):
@@ -346,6 +349,8 @@ class Game(BaseModel):
     async def pass_cards(self, player: Player, cards):
         if not self.waiting_for_pass:
             raise ValidationError("Cannot pass cards")
+        if len(cards) != 3:
+            raise ValidationError("Should be 3 cards")
         for card in cards:
             try:
                 player.hand.pop(player.hand.index(card))
@@ -353,7 +358,7 @@ class Game(BaseModel):
                 raise ValidationError("You don't have that card")
 
 public_methods = (
-    "chat",
+    "message",
     "player_move",
     "pass_cards",
     "notify_state",

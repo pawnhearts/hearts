@@ -90,7 +90,8 @@ class ConnectionManager:
         try:
             await self.sockets[player.telegram_id].send_text(notification.model_dump_json())
         except:
-            self.sockets.pop(player.telegram_id, None)
+            pass
+            # self.sockets.pop(player.telegram_id, None)
 
 manager = ConnectionManager()
 
