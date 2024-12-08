@@ -160,6 +160,8 @@ class Game(BaseModel):
         await self.notify("chat", chat_message.private_to, chat_message.model_dump())
 
     async def join(self, player: Player):
+        if self.started_at:
+            raise ValueError('Game already started')
         self.players.append(player)
         players[player.telegram_id] = player
         games_by_player[player.telegram_id] = self
@@ -224,6 +226,7 @@ class Game(BaseModel):
         await manager.notify_player(player, msg)
 
     async def deal(self):
+        print('DEAL')
         self.score_opened = False
         self.table = []
 
@@ -330,7 +333,7 @@ class Game(BaseModel):
             self.players.rotate(-took)
             await self.notify("players", None, self.model_dump(include={"players"}))
             self.table = []
-            if not any(p.hand for p in self.players):
+            if all(not p.hand for p in self.players):
                 await self.deal()
 
         await self.notify("table", None, self.model_dump(include={"table", "score_opened"}))
