@@ -80,7 +80,7 @@ span.card {
 .c2s {background-image: url(svg/2s.svg)}
 .cjh {background-image: url(svg/jh.svg)}
 .c3c {background-image: url(svg/3c.svg)}
-span.card.no {
+span.card.invalid {
     cursor: default;
     opacity: 0.3;
 }

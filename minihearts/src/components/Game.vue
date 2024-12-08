@@ -30,7 +30,6 @@
 <!--      <button v-for="c in hand" @click="$emit('move', c)">{{c}}</button>-->
     </div>
     <div :class="['mid', player_classes[i]]" v-for="(card, i) in table" :key="card">
-      {{card}}
       <span  :class="['card', 'c'+card]"></span>
       </div>
   </div>
@@ -75,12 +74,10 @@ export default {
   computed: {
     player_classes() {
       let order=['south', 'west', 'north', 'east', 'south', 'west', 'north', 'east']
-      let res = {}
       for(let i=0; i<4; i++){
         if(this.game.players[i].telegram_id === this.telegram_id) {
           order = order.splice(i)
           return this.game.players.map((p, i) => order[i])
-
         }
       }
 
@@ -103,27 +100,29 @@ div.hand{
   margin-left: auto;
 }
 .mid {
-  width: 3.3em;
-  height: 4.6em;
+  width: 71px;
+  height: 103px;
   position: absolute;
   top: 50%;
   left: 50%;
-  margin-top: 4.6em;
   background-color: red;
 }
+.mid span.card{
+  position:relative;
+  margin-left: 0;
+
+}
 div.mid.north{
-  margin-top: 4.6em;
+  margin-top: -50px;
 }
 div.mid.south{
-  margin-top: -4.6em;
+  margin-top: 50px;
 }
 div.mid.west{
-  margin-left: -3.3em;
+  margin-left: -35px;
 }
 div.mid.east{
-  margin-left: 3.3em;
+  margin-left: 35px;
 }
-.invalid {
-    opacity:0.5;
-}
+
 </style>

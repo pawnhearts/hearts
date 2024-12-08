@@ -122,7 +122,7 @@ async def websocket_endpoint(websocket: WebSocket, telegram_id: int):#, key: Opt
             if method in public_methods:
                 try:
                     await getattr(websocket.game, method)(**data)
-                except ValidationError as e:
+                except ValueError as e:
                     await websocket.send_json({'error': str(e)})
     except WebSocketDisconnect:
         await manager.disconnect(websocket)

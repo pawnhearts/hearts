@@ -13,7 +13,6 @@ from faker import Faker
 from pydantic import (
     Field,
     BaseModel,
-    ValidationError,
     PlainSerializer,
     computed_field,
     field_serializer,
@@ -41,7 +40,7 @@ def sort_hand(hand):
 
 
 def max_rank(cards):
-    return cards.index(max(filter(lambda c: c[1] == cards[0][1]), key=rank))
+    return cards.index(max(filter(lambda c: c[1] == cards[0][1], cards), key=rank))
 
 
 def get_deck() -> list[str]:
@@ -299,23 +298,23 @@ class Game(BaseModel):
 
     async def player_move(self, player: Player, card):
         if self.players[len(self.table)] != player:
-            raise ValidationError("Not your move")
+            raise ValueError("Not your move")
         await self.move(card)
 
     async def move(self, card):
-        print(card)
         move_of = self.players[len(self.table)]
         if card not in move_of.hand:
-            raise ValidationError("You don't have that card")
+            raise ValueError("You don't have that card")
         if score(card) and not self.score_opened:
-            raise ValidationError("Wrong move")
+            raise ValueError("Wrong move")
         if self.table:
             suit = self.table[0][1]
             if any(c[1] == suit for c in move_of.hand):
                 if card[1] != suit:
-                    raise ValidationError("Wrong suit")
+                    raise ValueError("Wrong suit")
         self.table.append(card)
         await self.notify("table", None, self.model_dump(include={"table"}))
+        await self.notify("hand", move_of, {"hand": sort_hand(move_of.hand)})
         if len(self.table) == 4:
             scores = sum(map(score, self.table))
             if scores:
@@ -341,6 +340,7 @@ class Game(BaseModel):
             self._timeout = asyncio.create_task(self.timeout_task())
 
     async def auto_move(self):
+        await asyncio.sleep(1)
         move_of = self.players[len(self.table)]
         if not self.table:
             return await self.move(min(move_of.hand, key=lambda c: (score(c), rank(c))))
@@ -357,14 +357,14 @@ class Game(BaseModel):
 
     async def pass_cards(self, player: Player, cards):
         if not self.waiting_for_pass:
-            raise ValidationError("Cannot pass cards")
+            raise ValueError("Cannot pass cards")
         if len(cards) != 3:
-            raise ValidationError("Should be 3 cards")
+            raise ValueError("Should be 3 cards")
         for card in cards:
             try:
                 player.hand.pop(player.hand.index(card))
             except ValueError:
-                raise ValidationError("You don't have that card")
+                raise ValueError("You don't have that card")
 
 public_methods = (
     "message",
