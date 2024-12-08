@@ -78,13 +78,10 @@ export default {
   },
   computed: {
     player_classes() {
-      let order=['south', 'west', 'north', 'east', 'south', 'west', 'north', 'east']
-      for(let i=0; i<4; i++){
-        if(this.game.players[i].telegram_id === this.telegram_id) {
-          order = order.splice(i)
-          return this.game.players.map((p, i) => order[i])
-        }
-      }
+      let order = ['south', 'west', 'north', 'east', 'south', 'west', 'north', 'east']
+      let you = this.game.players.map((p) => p.telegram_id).indexOf(this.telegram_id)
+      while(order[you] !== 'south') order.shift()
+      return this.game.players.map((p, i) => order[i])
 
     }
   },
