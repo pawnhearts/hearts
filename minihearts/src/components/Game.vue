@@ -125,5 +125,8 @@ div.mid.west{
 div.mid.east{
   margin-left: 35px;
 }
+div.mid.fly{
+  transition: margin-top 4s;
+}
 
 </style>
