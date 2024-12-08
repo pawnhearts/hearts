@@ -16,7 +16,6 @@ body{
 }
 div.hand{
     padding-left:32px;
-    margin-left:200px;
 }
 span.card {
     display: inline-block;
