@@ -202,6 +202,8 @@ class Game(BaseModel):
             await self.start()
 
     async def notify(self, event: str, player: Player | None, data: dict) -> None:
+        if player and player.is_bot:
+            return
         from ws import manager
 
         msg = Notification(event=event, player=player, data=data)
@@ -255,7 +257,7 @@ class Game(BaseModel):
                         "where": self._pass_names[self.round_number % 4],
                     },
                 )
-            await asyncio.sleep(8)
+            await asyncio.sleep(2)
             for i, p in enumerate(self.players):
                 while len(p.pass_cards) < 3:
                     card = random.choice(p.hand)
@@ -288,6 +290,12 @@ class Game(BaseModel):
             self.waiting_for_pass = False
 
         self.round_number += 1
+        if self._timeout:
+            self._timeout.cancel()
+        if self.players[len(self.table)].auto_move:
+            await self.auto_move()
+        else:
+            self._timeout = asyncio.create_task(self.timeout_task())
 
     async def player_move(self, player: Player, card):
         if self.players[len(self.table)] != player:
@@ -295,6 +303,7 @@ class Game(BaseModel):
         await self.move(card)
 
     async def move(self, card):
+        print(card)
         move_of = self.players[len(self.table)]
         if card not in move_of.hand:
             raise ValidationError("You don't have that card")
@@ -334,7 +343,7 @@ class Game(BaseModel):
     async def auto_move(self):
         move_of = self.players[len(self.table)]
         if not self.table:
-            return await self.move(min(move_of.hand, key=rank))
+            return await self.move(min(move_of.hand, key=lambda c: (score(c), rank(c))))
         suit = self.table[0][1]
         if any(c[1] == suit for c in move_of.hand):
             return await self.move(

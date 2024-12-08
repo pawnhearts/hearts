@@ -5,19 +5,21 @@
     {{player.display_name}}
     </div>
     <div class="hand">
+      <span v-for="c in hand" :key="c"  :class="['card', 'c'+c]" @click="$emit('move', c)"/>
 
-      <ul class="hand">
-        <li v-for="c in hand" :key="c">
-          <label :for="c" :class="classes(c)" v-if="game.waiting_for_pass">
-            <span class="rank">{{c.charAt(0)}}</span>
-            <span class="suit">{{suitSymbol(c)}}</span>
-            <input type="checkbox" :name="c" :id="c" :value="c" v-model="pass_cards" @change="pass_cards_changed" />
-          </label>
-          <a href="#" :class="classes(c)+isSuitable(c)?['invalid']:[]" v-if="!game.waiting_for_pass">
-          <span class="rank">{{c.charAt(0)}}</span><span class="suit">{{suitSymbol(c)}}</span>
-        </a>
-        </li>
-      </ul>
+<!--      <ul class="hand">-->
+<!--        <li v-for="c in hand" :key="c">-->
+<!--          <label :for="c" :class="classes(c)" v-if="game.waiting_for_pass">-->
+<!--            <span class="rank">{{c.charAt(0)}}</span>-->
+<!--            <span class="suit">{{suitSymbol(c)}}</span>-->
+<!--            <input type="checkbox" :name="c" :id="c" :value="c" v-model="pass_cards" @change="pass_cards_changed" />-->
+<!--          </label>-->
+<!--          <a href="#" :class="classes(c)+isSuitable(c)?['invalid']:[]" v-if="!game.waiting_for_pass">-->
+<!--          <span class="rank">{{c.charAt(0)}}</span><span class="suit">{{suitSymbol(c)}}</span>-->
+<!--        </a>-->
+<!--        </li>-->
+<!--      </ul>-->
+
 <!--      <ul class="hand">-->
 <!--        <li v-for="c in hand" :key="c">-->
 <!--          <div :class="classes(c)">-->
@@ -28,6 +30,8 @@
 <!--      <button v-for="c in hand" @click="$emit('move', c)">{{c}}</button>-->
     </div>
     <div :class="['mid', player_classes[i]]" v-for="(card, i) in table" :key="card">
+      {{card}}
+      <span  :class="['card', 'c'+card]"></span>
       </div>
   </div>
 </template>
@@ -89,7 +93,7 @@ export default {
 
 </script>
 <style>
-//@import "../assets/cards.css";
+@import "../assets/card.css";
 div.hand{
   position: absolute;
   bottom: 0;

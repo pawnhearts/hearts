@@ -11,8 +11,10 @@
   "dependencies": {
     "@mdi/font": "7.4.47",
     "roboto-fontface": "*",
+    "vite-plugin-vuetify": "^2.0.4",
     "vue": "^3.4.31",
-    "vue-tg": "^0.8.0"
+    "vue-tg": "^0.8.0",
+    "vuetify": "^3.7.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.5",

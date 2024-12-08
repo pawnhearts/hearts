@@ -1,0 +1,90 @@
+div.hand span.card:nth-child(1)  { left: 0; }
+div.hand span.card:nth-child(2)  { left: 1.1em; }
+div.hand span.card:nth-child(3)  { left: 2.2em; }
+div.hand span.card:nth-child(4)  { left: 3.3em; }
+div.hand span.card:nth-child(5)  { left: 4.4em; }
+div.hand span.card:nth-child(6)  { left: 5.5em; }
+div.hand span.card:nth-child(7)  { left: 6.6em; }
+div.hand span.card:nth-child(8)  { left: 7.7em; }
+div.hand span.card:nth-child(9)  { left: 8.8em; }
+div.hand span.card:nth-child(10) { left: 9.9em; }
+div.hand span.card:nth-child(11) { left: 11em; }
+div.hand span.card:nth-child(12) { left: 12.1em; }
+div.hand span.card:nth-child(13) { left: 13.2em; }
+body{
+    background: #090; 
+}
+div.hand{
+    padding-left:32px;
+    margin-left:200px;
+}
+span.card {
+    display: inline-block;
+    position: absolute;
+    background-repeat:no-repeat;
+    background-size: 71px 103px;
+    width:71px;
+    height: 103px;
+    margin-left: -22px;
+    cursor: pointer;
+}
+.ckc {background-image: url(svg/kc.svg)}
+.c2h {background-image: url(svg/2h.svg)}
+.cjd {background-image: url(svg/jd.svg)}
+.cjs {background-image: url(svg/js.svg)}
+.ckd {background-image: url(svg/kd.svg)}
+.cks {background-image: url(svg/ks.svg)}
+.c3h {background-image: url(svg/3h.svg)}
+.cjc {background-image: url(svg/jc.svg)}
+.cqh {background-image: url(svg/qh.svg)}
+.ctc {background-image: url(svg/tc.svg)}
+.c7s {background-image: url(svg/7s.svg)}
+.c4h {background-image: url(svg/4h.svg)}
+.cac {background-image: url(svg/ac.svg)}
+.c7d {background-image: url(svg/7d.svg)}
+.c6c {background-image: url(svg/6c.svg)}
+.c8h {background-image: url(svg/8h.svg)}
+.c9h {background-image: url(svg/9h.svg)}
+.cad {background-image: url(svg/ad.svg)}
+.c7c {background-image: url(svg/7c.svg)}
+.cas {background-image: url(svg/as.svg)}
+.cts {background-image: url(svg/ts.svg)}
+.ctd {background-image: url(svg/td.svg)}
+.c5h {background-image: url(svg/5h.svg)}
+.c6s {background-image: url(svg/6s.svg)}
+.c6d {background-image: url(svg/6d.svg)}
+.c8c {background-image: url(svg/8c.svg)}
+.c5d {background-image: url(svg/5d.svg)}
+.c6h {background-image: url(svg/6h.svg)}
+.c5s {background-image: url(svg/5s.svg)}
+.c9d {background-image: url(svg/9d.svg)}
+.c9s {background-image: url(svg/9s.svg)}
+.c4c {background-image: url(svg/4c.svg)}
+.cah {background-image: url(svg/ah.svg)}
+.cth {background-image: url(svg/th.svg)}
+.c5c {background-image: url(svg/5c.svg)}
+.c8d {background-image: url(svg/8d.svg)}
+.c8s {background-image: url(svg/8s.svg)}
+.c4d {background-image: url(svg/4d.svg)}
+.c4s {background-image: url(svg/4s.svg)}
+.c7h {background-image: url(svg/7h.svg)}
+.c9c {background-image: url(svg/9c.svg)}
+.c2c {background-image: url(svg/2c.svg)}
+.cqd {background-image: url(svg/qd.svg)}
+.cqs {background-image: url(svg/qs.svg)}
+.ckh {background-image: url(svg/kh.svg)}
+.c3d {background-image: url(svg/3d.svg)}
+.c3s {background-image: url(svg/3s.svg)}
+.cqc {background-image: url(svg/qc.svg)}
+.c2d {background-image: url(svg/2d.svg)}
+.c2s {background-image: url(svg/2s.svg)}
+.cjh {background-image: url(svg/jh.svg)}
+.c3c {background-image: url(svg/3c.svg)}
+span.card.no {
+    cursor: default;
+    opacity: 0.3;
+}
+span.card.selected {
+    margin-top: -12px;
+
+}

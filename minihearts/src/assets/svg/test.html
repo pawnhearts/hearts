@@ -12,6 +12,7 @@ background-size: 71px 103px;
 width:71px;
 height: 103px;
 margin-left: -22px;
+    cursor: pointer;
 }
 #ckc {background-image: url(kc.svg)}
 #c2h {background-image: url(2h.svg)}
@@ -65,10 +66,18 @@ margin-left: -22px;
 #c2s {background-image: url(2s.svg)}
 #cjh {background-image: url(jh.svg)}
 #c3c {background-image: url(3c.svg)}
+span.card.no {
+    cursor: default;
+    opacity: 0.3;
+}
+span.card.selected {
+    background-position-y: -12px;
+
+}
 </style>
 <div class="cont hand">
 <span class="card" id="cqs"></span>
-<span class="card" id="c3d"></span>
-<span class="card" id="ckh"></span>
+<span class="card no" id="c3d"></span>
+<span class="card selected" id="ckh"></span>
 </div>
 
