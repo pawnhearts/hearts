@@ -5,7 +5,7 @@
     {{player.display_name}}
     </div>
     <div class="hand">
-      <span v-for="c in hand" :key="c"  :class="['card', 'c'+c]" @click="$emit('move', c)"/>
+      <span v-for="c in hand" :key="c"  :class="['card', 'c'+c, pass_cards.indexOf(c)!==-1?'selected': '']" @click="card_clicked(c)"/>
 
 <!--      <ul class="hand">-->
 <!--        <li v-for="c in hand" :key="c">-->
@@ -52,12 +52,16 @@ export default {
     suitSymbol(card) {
       return {'h': '♥', 'd': '♦', 'c': '♣', 's': '♠'}[card.charAt(1)]
     },
-    pass_cards_changed() {
-      if(this.pass_cards.length === 3) {
-        this.$emit('pass_cards', self.pass_cards);
-        this.pass_cards = [];
-        this.game.waiting_for_pass = false
-
+    card_clicked(card) {
+      if(this.waiting_for_pass) {
+        this.pass_cards.push(card);
+         if(this.pass_cards.length === 3) {
+            this.$emit('pass_cards', self.pass_cards);
+            this.pass_cards = [];
+            this.game.waiting_for_pass = false
+          }
+      } else {
+        this.$emit('move', card)
       }
     },
     isSuitable(card) {

@@ -313,6 +313,7 @@ class Game(BaseModel):
                 if card[1] != suit:
                     raise ValueError("Wrong suit")
         self.table.append(card)
+        move_of.hand.remove(card)
         await self.notify("table", None, self.model_dump(include={"table"}))
         await self.notify("hand", move_of, {"hand": sort_hand(move_of.hand)})
         if len(self.table) == 4:
@@ -324,6 +325,7 @@ class Game(BaseModel):
             await self.notify(
                 "took", None, {"took": self.players[took], "score": scores}
             )
+            await asyncio.sleep(2)
             self.players[took].scores[-1] += scores
             self.players.rotate(-took)
             await self.notify("players", None, self.model_dump(include={"players"}))
@@ -340,7 +342,6 @@ class Game(BaseModel):
             self._timeout = asyncio.create_task(self.timeout_task())
 
     async def auto_move(self):
-        await asyncio.sleep(1)
         move_of = self.players[len(self.table)]
         if not self.table:
             return await self.move(min(move_of.hand, key=lambda c: (score(c), rank(c))))
