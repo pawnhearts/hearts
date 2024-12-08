@@ -99,10 +99,9 @@ export default {
 div.hand{
   position: absolute;
   bottom: 0;
-  width: 100%;
+  left: 100px;
   height: 200px;
   display: block;
-  margin-left: auto;
 }
 .mid {
   width: 71px;
