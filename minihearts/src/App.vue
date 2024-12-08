@@ -118,6 +118,7 @@ export default {
       }
       if(received['event'] === 'table'){
         this.table = received.data.table
+        this.game.score_opened = received.data.score_opened
       }
       if(received['event'] === 'chat'){
         this.data.chat_messages.push(received.data)

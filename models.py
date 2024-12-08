@@ -314,7 +314,7 @@ class Game(BaseModel):
                     raise ValueError("Wrong suit")
         self.table.append(card)
         move_of.hand.remove(card)
-        await self.notify("table", None, self.model_dump(include={"table"}))
+        await self.notify("table", None, self.model_dump(include={"table", "score_opened"}))
         await self.notify("hand", move_of, {"hand": sort_hand(move_of.hand)})
         if len(self.table) == 4:
             scores = sum(map(score, self.table))
@@ -333,7 +333,7 @@ class Game(BaseModel):
             if not any(p.hand for p in self.players):
                 await self.deal()
 
-        await self.notify("table", None, self.model_dump(include={"table"}))
+        await self.notify("table", None, self.model_dump(include={"table", "score_opened"}))
         if self._timeout:
             self._timeout.cancel()
         if self.players[len(self.table)].auto_move:

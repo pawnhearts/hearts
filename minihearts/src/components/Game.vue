@@ -5,7 +5,7 @@
     {{player.display_name}}
     </div>
     <div class="hand">
-      <span v-for="c in hand" :key="c"  :class="['card', 'c'+c, pass_cards.indexOf(c)!==-1?'selected': '']" @click="card_clicked(c)"/>
+      <span v-for="c in hand" :key="c"  :class="['card', 'c'+c, pass_cards.indexOf(c)!==-1?'selected': '', isSuitable(c)?'':'invalid']" @click="card_clicked(c)"/>
 
 <!--      <ul class="hand">-->
 <!--        <li v-for="c in hand" :key="c">-->
@@ -65,9 +65,10 @@ export default {
       }
     },
     isSuitable(card) {
-      if(this.table.length == 0) {
+      if(this.waiting_for_pass) return true;
+      if(this.table.length === 0) {
         if(this.game.score_opened) return true;
-        else return (card === 'qs') || card.charAt(1) === 'h';
+        return (card !== 'qs') && card.charAt(1) !== 'h';
       } else {
         let suit = this.table[0].charAt(1);
         if(this.hand.some(c => c.charAt(1)===suit)) return card.charAt(1) === suit;
