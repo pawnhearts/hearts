@@ -37,7 +37,7 @@ async def move(card: str, player: Annotated[Player, Depends(get_current_player)]
     await game.player_move(player, card)
 
 @api_router.post("/vote_to_start")
-async def vote_to_start(card: str, player: Annotated[Player, Depends(get_current_player)], game: Annotated[Game, Depends(get_game)]):
+async def vote_to_start(player: Annotated[Player, Depends(get_current_player)], game: Annotated[Game, Depends(get_game)]):
     await game.vote_to_start(player)
 
 

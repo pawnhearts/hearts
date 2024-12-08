@@ -31,7 +31,13 @@
 import Lobby from './components/Lobby.vue'
 import Game from './components/Game.vue'
 import Chat from './components/Chat.vue'
+import axios from 'axios'
 
+const api = axios.create({
+    baseURL: '/',
+    headers: {
+    }
+});
 
 
 export default {
@@ -127,20 +133,23 @@ export default {
     onSockerError(evt){
       this.connection_error = true;
     },
-
     send_chat(message) {
+      // api.post('chat', {'message': message})
       this.websocket.send( JSON.stringify({event: 'message', 'message': message}) );
     },
     move(card) {
+      // api.post('move', {'card': card})
       this.websocket.send( JSON.stringify({event: 'player_move', 'card': card}) );
     },
     pass_cards(cards) {
       if(this.game.waiting_for_pass) {
+        // api.post('pass_cards', {'cards': cards})
         this.websocket.send(JSON.stringify({event: 'pass_cards', 'cards': cards}));
         this.game.waiting_for_pass = false
       }
     },
     vote_to_start() {
+      // api.post('vote_to_start', {})
       this.websocket.send( JSON.stringify({event: 'vote_to_start'}) );
     },
   },
