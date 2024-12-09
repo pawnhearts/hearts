@@ -243,7 +243,7 @@ class Game(BaseModel):
         deck = get_deck()
         for p in self.players:
             p.hand = sort_hand([deck.pop(0) for _ in range(13)])
-            await self.notify("hand", p, p.model_dump(include={"hand"}))
+            await self.notify("hand", p, {"hand": p.hand})
             p.scores.append(0)
 
         for i, p in enumerate(self.players):
@@ -292,7 +292,7 @@ class Game(BaseModel):
                 )
                 p.pass_cards = []
             for p in self.players:
-                await self.notify("hand",p , p.model_dump(include={"hand"}))
+                await self.notify("hand",p , {"hand": p.hand})
             self.waiting_for_pass = False
 
         self.round_number += 1
@@ -322,7 +322,7 @@ class Game(BaseModel):
         self.table.append(card)
         move_of.hand.remove(card)
         await self.notify("table", None, self.model_dump(include={"table", "score_opened"}))
-        await self.notify("hand", move_of, move_of.model_dump(include={"hand"}))
+        await self.notify("hand", move_of, {"hand": move_of.hand})
         if len(self.table) == 4:
             scores = sum(map(score, self.table))
             if scores:

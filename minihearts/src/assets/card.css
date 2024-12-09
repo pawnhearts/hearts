@@ -81,7 +81,7 @@ span.card {
 .c3c {background-image: url(svg/3c.svg)}
 span.card.invalid {
     cursor: default;
-    opacity: 0.3;
+    margin-top:12px;
 }
 span.card.selected {
     margin-top: -12px;
